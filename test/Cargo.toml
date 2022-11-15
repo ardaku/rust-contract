@@ -1,0 +1,11 @@
+[package]
+name = "rust-contract-test"
+version = "0.1.0"
+authors = ["CATboardBETA <catboardbeta@gmail.com>"]
+description = "Testing for rust-contract"
+edition = "2021"
+
+[lib]
+
+[dev-dependencies]
+rust-contract = { path = ".." }
