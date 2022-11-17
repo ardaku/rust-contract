@@ -1,32 +1,21 @@
 
-/// Internally, this just creates it in documentation with the `compile_fail` flag., and everything
-/// prefixed with # (to hide the documentation.
+/// Internally, this just creates it in documentation with the `compile_fail` flag.
 ///
-/// It's also in a `cfg(doctest)` attr, so it's only compiled when running `cargo test --doc`.
+/// Syntax:
+/// `assert_compile_fail!` followed by a block of code, and then a `;` and the name of the test
+#[macro_export]
 macro_rules! assert_compile_fail {
-    ($($tt:tt)*) => {
+    ($name:ident, $($tt:tt)*) => {
         #[cfg(doctest)]
-        #[doc = "# ```compile_fail"]
-        #[doc = $crate::stringify!($($tt)*)]
-        #[doc = "# ```"]
+        #[doc = "```compile_fail"]
+        #[doc = std::stringify!($($tt)*)]
+        #[doc = "```"]
         #[allow(dead_code)]
-        pub const _: () = ();
+        pub const $name: () = ();
     }
 }
 
-// /// Should produce a compile error
-// /// ```compile_fail
-// /// fn placeholder_param_name() {
-// ///     #[contract("_ = vary -> vary")]
-// ///     fn test_fn(_: u32) -> u32 {
-// ///         0
-// ///     }
-// /// }
-// /// ```
-// #[cfg(doctest)]
-// #[allow(dead_code)]
-// pub struct PlaceholderParamNameDoctest;
-
+#[macro_export]
 macro_rules! assert_eq_list {
     ($left:expr, $right:expr) => {
         assert_eq!($left.len(), $right.len());
@@ -36,14 +25,36 @@ macro_rules! assert_eq_list {
     };
 }
 
-#[cfg(test)]
+/// Should run on cfg(doctest) and cfg(test)
+#[cfg(any(doctest, test))]
 mod tests {
     use rust_contract::contract;
 
     // === Panicing/erroring tests ===
 
     assert_compile_fail!(
-        #[contract("x = vary -> vary")]
+        test_placeholder_param,
+        #[contract("_ = vary -> vary")]
+        fn test_fn(_: u32) -> u32 {
+            0
+        }
+    );
+
+    assert_compile_fail!(
+        test_default_output_type,
+        #[contract("x = vary -> ()")]
+        fn test_fn(_x: u32) {}
+    );
+
+    assert_compile_fail!(
+        test_unit_output_type,
+        #[contract("x = vary -> ()")]
+        fn test_fn(_x: u32) -> () {}
+    );
+
+    assert_compile_fail!(
+        test_no_contracts,
+        #[contract()]
         fn test_fn(x: u32) -> u32 {
             x
         }
@@ -51,14 +62,16 @@ mod tests {
 
     // === Non-panicing tests ===
 
+    // Ignore the IntelliJ error here, it works fine
+    //noinspection RsUnresolvedReference
     #[test]
-    fn vary_vary() {
+    fn test_vary_vary() {
         #[contract("x = vary -> vary")]
-        pub fn identity(x: u32) -> u32 {
+        pub fn test_fn(x: u32) -> u32 {
             x
         }
-        let left: Vec<u32> = vec![1, 2, 3, 4, 5];
-        let right: Vec<u32> = left.iter().map(|x| identity(*x)).collect::<Vec<_>>();
+        let left: Vec<u32> = (0..1000).map(test_fn).collect();
+        let right: Vec<u32> = left.iter().map(|x| test_fn(*x)).collect::<Vec<_>>();
         assert_eq_list!(left, right);
         // It can be assumed that it works at this point
     }
